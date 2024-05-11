@@ -57,33 +57,49 @@ def plot_function(DF):
     axs.set_ylabel('y')
     plt.show()
 
-for p in problems:
-    plot_function(p)
+# for p in problems:
+#     plot_function(p)
+
+# Optimization program1
+def optimization_program1(df, parameters):
+    print("Optimization program1: solving ", df.name, " with parameters: ", parameters)
+    return None
+# Optimization program2
+def optimization_program2(df, parameters):
+    print("Optimization program2: solving ", df.name, " with parameters: ", parameters)
+    return None
+# Optimization program3
+def optimization_program3(df, parameters):
+    print("Optimization program3: solving ", df.name, " with parameters: ", parameters)
+    return None
+# Optimization program4
+def optimization_program4(df, parameters):
+    print("Optimization program4: solving ", df.name, " with parameters: ", parameters)
+    return None
 
 # Grid search works with problems 
 # opt_solver: optimization method solver
 # df: df
 # **parameters: dictionary of parameters for each optimization methodsolver
-def meta_grid_search(opt_solver, df, **parameters):
+# 
+def meta_grid_search(optimization_program, df, **parameters):
+    for (k, v) in parameters.items():
+        optimization_program(df, v)
     return None
 
 # Evaluate 
 # opt_solvers: list of optimization methods solver
 # parameters: list of parameters for each optimization method solver
 # Calls optimization method solver for each function (DF01-DF14) with the given parameters
-def evaluate_methods(opt_solvers, parameters):
+def evaluate_programs(optimization_programs, parameters):
+    for func in optimization_programs:
+        for p in problems: 
+            meta_grid_search(func, p, a=1, b=2, c=3)
+
     return None
 
-# Optimization solver1
-def opt_solver1(df, **parameters):
-    return None
-# Optimization solver2
-def opt_solver2(df, **parameters):
-    return None
-# Optimization solver3
-def opt_solver3(df, **parameters):
-    return None
-# Optimization solver4
-def opt_solver4(df, **parameters):
-    return None
+def main():
+    evaluate_programs([optimization_program1, optimization_program2, optimization_program3, optimization_program4], [None, None, None, None])
 
+if __name__ == "__main__":
+    main()
