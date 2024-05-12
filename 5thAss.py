@@ -58,20 +58,22 @@ def plot_function(DF):
     axs.set_ylabel('y')
     plt.show()
 
-# Optimization program template
-# first argument: optimization problem
-# next keyword arguments: parameters for the method
-# returns: lowest value and position of it
 def template_search(df, a=2, b=3):
+    """ Optimization program template
+        first argument:         optimization problem
+        next keyword arguments: parameters for the method
+        returns:                lowest value and position of it
+    """
     print(f"Template with a={a}, b={b} tried with \"result\" {a*b}.")
     return a*b, [0]*5
 
-# Grid search works with problems 
-# opt_solver: optimization method solver
-# df: optimization problem
-# **parameters: parameters for the optimization solver
-# returns: lowest value, position of it, best parameters found
 def meta_grid_search(opt_solver, df, **parameters):
+    """ Grid search works with problems 
+        opt_solver:   optimization method solver
+        df:           optimization problem
+        **parameters: parameters for the optimization solver
+        returns:      lowest value, position of it, best parameters found
+    """
     best_r, best_params, best_pos = float("inf"), None, None
     for params in itertools.product(*parameters.values()):
         v = dict(zip(parameters.keys(), params))
@@ -82,12 +84,13 @@ def meta_grid_search(opt_solver, df, **parameters):
             best_pos = pos
     return best_r, best_pos, best_params
 
-# Evaluate 
-# optimization: list of optimization methods solver and its potential parameters
-# Calls optimization method solver for each function (DF01-DF14) with the given parameters and saves the results
 def evaluate_programs(optimizations):
+    """ Evaluate 
+        optimization: list of optimization methods solver and its potential parameters
+        Calls optimization method solver for each function (DF01-DF14) with the given parameters and saves the results
+    """
     for func,parameters in optimizations:
-        with open(f"{func.__name__}.txt", "a") as file:
+        with open(f"{func.__name__}.txt", "w") as file:
             for p in problems:
                 r,c,v = meta_grid_search(func, p, **parameters)
                 print(f"Problem {p.name()} with method {func.__name__} with parameters {v} at {c} with value {r}.")
