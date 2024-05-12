@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -57,49 +58,40 @@ def plot_function(DF):
     axs.set_ylabel('y')
     plt.show()
 
-# for p in problems:
-#     plot_function(p)
-
-# Optimization program1
-def optimization_program1(df, parameters):
-    print("Optimization program1: solving ", df.name, " with parameters: ", parameters)
-    return None
-# Optimization program2
-def optimization_program2(df, parameters):
-    print("Optimization program2: solving ", df.name, " with parameters: ", parameters)
-    return None
-# Optimization program3
-def optimization_program3(df, parameters):
-    print("Optimization program3: solving ", df.name, " with parameters: ", parameters)
-    return None
-# Optimization program4
-def optimization_program4(df, parameters):
-    print("Optimization program4: solving ", df.name, " with parameters: ", parameters)
-    return None
+# Optimization program template
+# first argument: optimization problem
+# next keyword arguments: parameters for the method
+# returns: lowest value and position of it
+def template_search(df, a=2, b=3):
+    print(f"Template with a={a}, b={b} tried with \"result\" {a*b}.")
+    return a*b, [0]*5
 
 # Grid search works with problems 
 # opt_solver: optimization method solver
-# df: df
-# **parameters: dictionary of parameters for each optimization methodsolver
-# 
-def meta_grid_search(optimization_program, df, **parameters):
-    for (k, v) in parameters.items():
-        optimization_program(df, v)
-    return None
+# df: optimization problem
+# **parameters: parameters for the optimization solver
+# returns: lowest value, position of it, best parameters found
+def meta_grid_search(opt_solver, df, **parameters):
+    best_r, best_params, best_pos = float("inf"), None, None
+    for params in itertools.product(*parameters.values()):
+        v = dict(zip(parameters.keys(), params))
+        r, pos = opt_solver(df, **v)
+        if r < best_r:
+            best_r = r
+            best_params = v
+            best_pos = pos
+    return best_r, best_pos, best_params
 
 # Evaluate 
-# opt_solvers: list of optimization methods solver
-# parameters: list of parameters for each optimization method solver
-# Calls optimization method solver for each function (DF01-DF14) with the given parameters
-def evaluate_programs(optimization_programs, parameters):
-    for func in optimization_programs:
-        for p in problems: 
-            meta_grid_search(func, p, a=1, b=2, c=3)
-
-    return None
-
-def main():
-    evaluate_programs([optimization_program1, optimization_program2, optimization_program3, optimization_program4], [None, None, None, None])
+# optimization: list of optimization methods solver and its potential parameters
+# Calls optimization method solver for each function (DF01-DF14) with the given parameters and saves the results
+def evaluate_programs(optimizations):
+    for func,parameters in optimizations:
+        with open(f"{func.__name__}.txt", "a") as file:
+            for p in problems:
+                r,c,v = meta_grid_search(func, p, **parameters)
+                print(f"Problem {p.name()} with method {func.__name__} with parameters {v} at {c} with value {r}.")
+                file.write("\t".join([str(v) for n in v.values()]))
 
 if __name__ == "__main__":
-    main()
+    evaluate_programs([(template_search, {"a": [1,2,3], "b": [4,5,6]})])
