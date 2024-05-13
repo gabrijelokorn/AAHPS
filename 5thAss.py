@@ -94,7 +94,7 @@ def evaluate_programs(optimizations):
             for p in problems:
                 r,c,v = meta_grid_search(func, p, **parameters)
                 print(f"Problem {p.name()} with method {func.__name__} with parameters {v} at {c} with value {r}.")
-                file.write("\t".join([str(v) for n in v.values()]))
+                file.write("\t".join([str(n) for n in c]) + "\n")
 
 if __name__ == "__main__":
     evaluate_programs([(template_search, {"a": [1,2,3], "b": [4,5,6]})])
