@@ -72,6 +72,66 @@ def template_search(df, a=2, b=3):
     print(f"Template with a={a}, b={b} tried with \"result\" {a*b}.")
     return a*b, [0]*5
 
+def genetic_algorithm(df, pop_size=100, generations=10, mutation_prob=10):
+    def init_population(df, pop_size=100):
+        return (np.random.uniform(low=df.xl, high=df.xu, size=(pop_size, len(df.xl))))
+    
+    def find_best(population):
+        best = population[0]
+        for i in range(1, len(population)):
+            if df.evaluate(population[i]) < df.evaluate(best):
+                best = population[i]
+        return best
+    
+    def evaluate_population(df, population):
+        return np.array([df.evaluate(x) for x in population])
+
+    def assign_probabilities(df, population):
+        objective_values = evaluate_population(df, population)
+
+        inverse_fitness = 1.0 / (objective_values + 1e-10)
+        total_fitness = np.sum(inverse_fitness)
+        selection_probabilities = inverse_fitness / total_fitness
+        return selection_probabilities
+    
+    def selection (df, population):
+        def roulette(population, selection_probabilities):
+            index = np.random.choice(len(population), p=selection_probabilities)
+            return population[index]
+        
+        selection_probabilities = assign_probabilities(df, population)
+        return roulette(population, selection_probabilities)
+    
+    def crossover(parent1, parent2, crossover_prob=0.9):
+        prob = assign_probabilities(df, [parent1, parent2])
+        child = np.zeros(len(parent1))
+
+        for i in range(len(parent1)):
+            random_number = np.random.uniform()
+            if random_number < prob[0]:
+                child[i] = parent1[i]
+            else:
+                child[i] = parent2[i]
+        return child
+    
+    population = init_population(df, pop_size)
+
+    for i in range(generations):
+        next_generation = []
+        for _ in range(0, len(population), 2):
+            parent1 = selection(df, population)
+            parent2 = selection(df, population)
+            child = crossover(parent1, parent2)
+            next_generation.append(child)
+
+        population = np.array(next_generation)
+
+
+    print(len(population))
+
+    best = find_best(population)
+    return df.evaluate(best), best
+
 def crow_search(df, apf=lambda c,j:random(),
                 fl=lambda c,i,mi:2*np.exp(-(i/mi)*2*np.pi),
                 num_crows=100, max_iter=1000):
@@ -177,4 +237,11 @@ def evaluate_programs(optimizations):
                 file.write("\t".join([str(n) for n in c]) + "\n ")
 
 if __name__ == "__main__":
-    evaluate_programs([])
+    evaluate_programs([
+        (genetic_algorithm, 
+         {
+             "pop_size": [100], 
+             "generations": [100], 
+             "mutation_prob": [0.1]
+             }
+            )])
