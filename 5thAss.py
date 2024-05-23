@@ -2,6 +2,7 @@ import itertools
 import copy
 from random import randint, random
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from timeit import default_timer as timer
 
@@ -23,7 +24,6 @@ problems = [dfs.DF1(time = time, n_var = n),
             dfs.DF12(time = time, n_var = n),
             dfs.DF13(time = time, n_var = n),
             dfs.DF14(time = time, n_var = n)]
-
 #Choose a sample test point (Note that this point is outside of bounds for some functions!)
 """
 test_point = np.array([0.5] * n)
@@ -143,7 +143,7 @@ def crow_search(df, apf=lambda c,j:random(),
         max_iter:  maximum number of iterations
         returns:   lowest value and position of it
     """
-    crow = (np.random.uniform(size=(num_crows,df.xl.shape[0]))-df.xl)/(df.xu-df.xl)
+    crow = df.xl+np.random.uniform(size=(num_crows,df.xl.shape[0]))*(df.xu-df.xl)
     m, vm = copy.deepcopy(crow), df.evaluate(crow)
     for _ in range(max_iter):
         for i in range(num_crows):
@@ -151,7 +151,7 @@ def crow_search(df, apf=lambda c,j:random(),
             if random() >= apf(crow,j):
                 crow[i] += random()*fl(crow,i,max_iter)*(m[j]-crow[i])
             else:
-                crow[i] = (np.random.uniform(size=df.xl.shape[0])-df.xl)/(df.xu-df.xl)
+                crow[i] =  df.xl+(np.random.uniform(size=df.xl.shape[0]))*(df.xu-df.xl)
             crow[i] = np.clip(df.xl,crow[i],df.xu)
         r = df.evaluate(crow)
         ind = vm>r
@@ -159,7 +159,7 @@ def crow_search(df, apf=lambda c,j:random(),
     ind = np.argmin(vm)
     return vm[ind], m[ind]
 
-def first_descent(x,df,neigh_size=100,max_iter=100,step=0.1,tol=10e-6):
+def first_descent(x,df,neigh_size=100,max_iter=100,step=0.1):
     vx = df.evaluate(x)
     for i in range(max_iter):
         it = 0
@@ -171,13 +171,14 @@ def first_descent(x,df,neigh_size=100,max_iter=100,step=0.1,tol=10e-6):
                 break
         if it==neigh_size:
             return nx, vnx
-        else:
-            x,vx = nx,vnx
-    return vx, x
+    return x, vx
 
-def shake(x,k,k_max,df):
-    r = (np.random.uniform(size=df.xl.shape[0])-df.xl)/(df.xu-df.xl)/(k_max-k+1)
-    return np.clip(df.xl,x+r,df.xu)
+def shake(x,k,k_max,df,alpha=0.01):
+    l = (df.xu-df.xl)/k_max*alpha
+    up = np.clip(df.xl, x+l,df.xu)
+    down = np.clip(df.xl, x-l,df.xu)
+    r = down+(np.random.uniform(size=df.xl.shape[0]))*(up-down)
+    return r
 
 def variable_neighborhood_search(df, shake=shake, k_max=5, max_iter=10):
     """ Variable neighborhood search
@@ -186,13 +187,13 @@ def variable_neighborhood_search(df, shake=shake, k_max=5, max_iter=10):
         k_max:    number of neighborhoods
         max_iter: number of iterations
     """
-    x = (np.random.uniform(size=df.xl.shape[0])-df.xl)/(df.xu-df.xl)
+    x = df.xl+(np.random.uniform(size=df.xl.shape[0]))*(df.xu-df.xl)
     v = df.evaluate(x)
     for i in range(max_iter):
         k = 1
         while k <= k_max:
             x_sh = shake(x,k,k_max,df)
-            v_ls, x_ls = first_descent(x_sh,df)
+            x_ls, v_ls = first_descent(x_sh,df)
             if v_ls<v:
                 x,v = x_ls,v_ls
                 k = 1
@@ -228,16 +229,29 @@ def evaluate_programs(optimizations):
         optimization: list of optimization methods solver and its potential parameters
         Calls optimization method solver for each function (DF01-DF14) with the given parameters and saves the results
     """
+    res = pd.DataFrame(data=np.zeros((len(problems),1)),
+                       columns = ['name'])
+    res['name']=[p.name() for p in problems]
     for func,parameters in optimizations:
         with open(f"{func.__name__}.txt", "w") as file:
+            rs,ts = [],[]
             for p in problems:
                 start = timer()
                 r,c,v = meta_grid_search(func, p, **parameters)
-                print(f"Problem {p.name()} with method {func.__name__} with parameters {v} at {c} with value {r} in {timer()-start} s.")
+                t = timer()-start
+                print(f"Problem {p.name()} with method {func.__name__} with parameters {v} at {c} with value {r} in {t} s.")
                 file.write("\t".join([str(n) for n in c]) + "\n ")
+                rs += [r]
+                ts += [t]
+            res[func.__name__]=rs
+            res[func.__name__+' time']=ts
+    return res
+
 
 if __name__ == "__main__":
-    evaluate_programs([
+    results = evaluate_programs([
+        (crow_search, {}),
+ #       (variable_neighborhood_search, {}),
         (genetic_algorithm, 
          {
              "pop_size": [100], 
@@ -245,3 +259,4 @@ if __name__ == "__main__":
              "mutation_prob": [0.1]
              }
             )])
+    print(results.rename(columns=lambda x: x.replace('_',' ')).to_latex())
