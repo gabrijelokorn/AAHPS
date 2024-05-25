@@ -73,64 +73,68 @@ def template_search(df, a=2, b=3):
     return a*b, [0]*5
 
 def genetic_algorithm(df, pop_size=100, generations=10, mutation_prob=10):
-    def init_population(df, pop_size=100):
-        return (np.random.uniform(low=df.xl, high=df.xu, size=(pop_size, len(df.xl))))
+    def init_population(pop_size=100, dimensionality=75):
+        return (np.random.uniform(low=df.xl, high=df.xu, size=(pop_size, dimensionality)))
     
-    def find_best(population):
-        best = population[0]
-        for i in range(1, len(population)):
-            if df.evaluate(population[i]) < df.evaluate(best):
-                best = population[i]
-        return best
+    def evaluate_point(point, df):
+        return df.evaluate(point)
     
-    def evaluate_population(df, population):
-        return np.array([df.evaluate(x) for x in population])
+    def abs_fitness_population(value_population):
+        return 1.0 / (value_population + 1e-10)
 
-    def assign_probabilities(df, population):
-        objective_values = evaluate_population(df, population)
-
-        inverse_fitness = 1.0 / (objective_values + 1e-10)
-        total_fitness = np.sum(inverse_fitness)
-        selection_probabilities = inverse_fitness / total_fitness
-        return selection_probabilities
+    def normalize_fitness_population(value_population):
+        return abs_fitness_population(value_population) / np.sum(abs_fitness_population(value_population))
     
-    def selection (df, population):
-        def roulette(population, selection_probabilities):
-            index = np.random.choice(len(population), p=selection_probabilities)
-            return population[index]
-        
-        selection_probabilities = assign_probabilities(df, population)
-        return roulette(population, selection_probabilities)
+    def selection(population, fitness_population):
+        index = np.random.choice(len(population), size=2, p=fitness_population)
+        return population[index[0]], population[index[1]], fitness_population[index[0]], fitness_population[index[1]]
+        # return population[index]
     
-    def crossover(parent1, parent2, crossover_prob=0.9):
-        prob = assign_probabilities(df, [parent1, parent2])
-        child = np.zeros(len(parent1))
+    def crossover(parent1, parent2, fit1, fit2):
+        fitness_sub_pop = fit1, fit2
+        fitness_sub_pop = fitness_sub_pop / np.sum(fitness_sub_pop)
 
+        child1 = np.zeros(len(parent1))
+        child2 = np.zeros(len(parent2))
         for i in range(len(parent1)):
-            random_number = np.random.uniform()
-            if random_number < prob[0]:
-                child[i] = parent1[i]
+            if np.random.rand() < fitness_sub_pop[0]:
+                child1[i] = parent1[i]
             else:
-                child[i] = parent2[i]
-        return child
+                child1[i] = parent2[i]
+            if np.random.rand() < fitness_sub_pop[1]:
+                child2[i] = parent2[i]
+            else:
+                child2[i] = parent1[i]
+
+        # point = np.random.randint(0, len(parent1))
+        # child1 = np.concatenate((parent1[:point], parent2[point:]))
+        # child2 = np.concatenate((parent2[:point], parent1[point:]))
+        return child1, child2
     
-    population = init_population(df, pop_size)
+    def mutation(child, mutation_prob):
+        for i in range(len(child)):
+            if np.random.rand() < mutation_prob:
+                child[i] = np.random.uniform(low=df.xl[i], high=df.xu[i])
+        return child
 
-    for i in range(generations):
-        next_generation = []
-        for _ in range(0, len(population), 2):
-            parent1 = selection(df, population)
-            parent2 = selection(df, population)
-            child = crossover(parent1, parent2)
-            next_generation.append(child)
+    population = init_population(pop_size, len(df.xl))
+    
+    for _ in range(generations):
+        value_population = np.array([evaluate_point(point, df) for point in population])
+        fitness_population = normalize_fitness_population(value_population)
+        new_population = []
+        for _ in range(pop_size):
+            parent1, parent2, fit1, fit2 = selection(population, fitness_population)
+            child1, child2 = crossover(parent1, parent2, fit1, fit2)
+            child1 = mutation(child1, mutation_prob)
+            child2 = mutation(child2, mutation_prob)
+            new_population.append(child1)
+            new_population.append(child2)
+        population = np.array(new_population)
 
-        population = np.array(next_generation)
-
-
-    print(len(population))
-
-    best = find_best(population)
-    return df.evaluate(best), best
+    value_population = np.array([evaluate_point(point, df) for point in population])    
+    best_index = np.argmin(value_population)
+    return value_population[best_index], population[best_index]
 
 def crow_search(df, apf=lambda c,j:random(),
                 fl=lambda c,i,mi:2*np.exp(-(i/mi)*2*np.pi),
@@ -250,13 +254,13 @@ def evaluate_programs(optimizations):
 
 if __name__ == "__main__":
     results = evaluate_programs([
-        (crow_search, {}),
+        # (crow_search, {}),
  #       (variable_neighborhood_search, {}),
         (genetic_algorithm, 
          {
-             "pop_size": [100], 
-             "generations": [100], 
-             "mutation_prob": [0.1]
+             "pop_size": [750], 
+             "generations": [500], 
+             "mutation_prob": [0.0025]
              }
             )])
     print(results.rename(columns=lambda x: x.replace('_',' ')).to_latex())
