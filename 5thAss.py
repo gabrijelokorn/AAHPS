@@ -215,4 +215,4 @@ if __name__ == "__main__":
         # (variable_neighborhood_search, {}),
         # (genetic_algorithm, {}),
         ])
-    print(results.rename(columns=lambda x: x.replace('_',' ')).to_latex())
+    print(results.rename(columns=lambda x: x.replace('_',' ')))
